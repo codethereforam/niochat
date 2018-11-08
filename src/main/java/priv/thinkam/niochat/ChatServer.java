@@ -1,4 +1,204 @@
 package priv.thinkam.niochat;
 
+import priv.thinkam.niochat.common.Constant;
+import priv.thinkam.niochat.util.StringUtils;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
+/**
+ * chat server
+ *
+ * @author yanganyu
+ * @date 2018/11/7 15:04
+ */
 public class ChatServer {
+	private Selector selector;
+	private Set<SocketChannel> socketChannelSet = new HashSet<>();
+	private ServerSocketChannel serverSocketChannel;
+	private volatile boolean running = true;
+
+	private ChatServer() {
+		try {
+			selector = Selector.open();
+			serverSocketChannel = ServerSocketChannel.open();
+			serverSocketChannel.configureBlocking(false);
+			serverSocketChannel.socket().bind(new InetSocketAddress(Constant.SERVER_PORT));
+			serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		System.out.println("==== chat server start ====");
+	}
+
+	/**
+	 * server thread
+	 *
+	 * @author yanganyu
+	 * @date 2018/11/7 15:21
+	 */
+	private void start() {
+		while (running) {
+			try {
+				selector.select(1000);
+				Set<SelectionKey> selectionKeySet = selector.selectedKeys();
+				Iterator<SelectionKey> selectionKeyIterator = selectionKeySet.iterator();
+				SelectionKey key;
+				while (selectionKeyIterator.hasNext()) {
+					key = selectionKeyIterator.next();
+					selectionKeyIterator.remove();
+					try {
+						handleInput(key);
+					} catch (Exception e) {
+						if (key != null) {
+							key.cancel();
+							if (key.channel() != null) {
+								key.channel().close();
+							}
+						}
+						break;
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * handle input
+	 *
+	 * @param selectionKey selectionKey
+	 * @author yanganyu
+	 * @date 2018/11/7 15:37
+	 */
+	private void handleInput(SelectionKey selectionKey) throws IOException {
+		if (selectionKey.isValid()) {
+			if (selectionKey.isAcceptable()) {
+				// Accept the new connection
+				ServerSocketChannel ssc = (ServerSocketChannel) selectionKey.channel();
+				SocketChannel socketChannel = ssc.accept();
+				socketChannel.configureBlocking(false);
+				// Add the new connection to the selector
+				socketChannel.register(selector, SelectionKey.OP_READ);
+				String collectedMessage = socketChannel.socket().getInetAddress().getHostAddress() + ":" + socketChannel.socket().getPort() + " collected!!!";
+				System.out.println(collectedMessage);
+				sendMessageToAll(collectedMessage, socketChannel);
+				// send old server info to new
+				StringBuilder onlineMessage = new StringBuilder();
+				socketChannelSet.forEach(s -> onlineMessage.append(socketChannel.socket().getInetAddress().getHostAddress()).append(":").append(socketChannel.socket().getPort()).append(" is online!!!\n"));
+				sendMessage(socketChannel, onlineMessage.toString());
+				socketChannelSet.add(socketChannel);
+			} else if (selectionKey.isReadable()) {
+				// Read the data
+				SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
+				ByteBuffer readBuffer = ByteBuffer.allocate(1024);
+				int readBytes = socketChannel.read(readBuffer);
+				if (readBytes > 0) {
+					readBuffer.flip();
+					byte[] bytes = new byte[readBuffer.remaining()];
+					readBuffer.get(bytes);
+					String message = new String(bytes, StandardCharsets.UTF_8);
+					System.out.println(message);
+					sendMessageToAll(message, socketChannel);
+				} else if (readBytes < 0) {
+					// close resource
+					selectionKey.cancel();
+					socketChannel.close();
+				}
+			} else {
+				System.out.println("!!! something wrong !!!");
+				System.exit(-1);
+			}
+		}
+	}
+
+	public void sendMessageToAll(String message, SocketChannel socketChannel) {
+		socketChannelSet.forEach(s -> {
+			if (s.isOpen()) {
+				if (s != socketChannel) {
+					sendMessage(s, message);
+				}
+			} else {
+				socketChannelSet.remove(s);
+				String exitMessage = s.socket().getInetAddress().getHostAddress() + ":" + s.socket().getPort() + " exited!!!";
+				System.out.println(exitMessage);
+				sendMessageToAll(exitMessage, null);
+			}
+		});
+	}
+
+	/**
+	 * send message to client
+	 *
+	 * @param channel  channel
+	 * @param response response
+	 * @author yanganyu
+	 * @date 2018/11/7 15:39
+	 */
+	private void sendMessage(SocketChannel channel, String response) {
+		if (response != null && StringUtils.isNotBlank(response)) {
+			byte[] bytes = response.getBytes();
+			ByteBuffer writeBuffer = ByteBuffer.allocate(bytes.length);
+			writeBuffer.put(bytes);
+			writeBuffer.flip();
+			try {
+				channel.write(writeBuffer);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * stop server
+	 *
+	 * @author yanganyu
+	 * @date 2018/11/8 15:11
+	 */
+	private void stop() {
+		running = false;
+		try {
+			serverSocketChannel.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	public static void main(String[] args) {
+		ChatServer chatServer = new ChatServer();
+		// listen stop command
+		new Thread(() -> {
+			try (
+					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in))
+			) {
+				while (true) {
+					String command = bufferedReader.readLine();
+					if (command != null && Constant.STOP_COMMAND.equals(command.trim())) {
+						chatServer.stop();
+						break;
+					} else {
+						System.out.println("!!!! invalid command !!!!");
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}).start();
+		chatServer.start();
+	}
+
 }
