@@ -7,6 +7,11 @@ package priv.thinkam.niochat.util;
  * @date 2018/11/8 13:52
  */
 public class StringUtils {
+	/**
+	 * empty string: ""
+	 */
+	public static final String EMPTY_STRING = "";
+
 	private StringUtils() {
 	}
 

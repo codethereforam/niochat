@@ -1,4 +1,4 @@
-package priv.thinkam.niochat;
+package priv.thinkam.niochat.server;
 
 import priv.thinkam.niochat.common.Constant;
 import priv.thinkam.niochat.util.StringUtils;

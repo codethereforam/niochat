@@ -1,7 +1,6 @@
-package priv.thinkam.niochat;
+package priv.thinkam.niochat.client;
 
 import priv.thinkam.niochat.common.Constant;
-import priv.thinkam.niochat.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,7 +13,6 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * chat client
@@ -29,11 +27,17 @@ public class ChatClient {
 	private static final String SERVER_IP = "127.0.0.1";
 	private Selector selector;
 	private SocketChannel socketChannel;
-	private String prefix;
+	private String sendMessagePrefix;
 	private BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
 	private volatile boolean running = true;
 
-	private ChatClient() {
+	private ChatClientFrame chatClientFrame;
+
+	public void setChatClientFrame(ChatClientFrame chatClientFrame) {
+		this.chatClientFrame = chatClientFrame;
+	}
+
+	public ChatClient() {
 		try {
 			selector = Selector.open();
 			socketChannel = SocketChannel.open();
@@ -50,7 +54,7 @@ public class ChatClient {
 	 * @author yanganyu
 	 * @date 2018/11/7 15:48
 	 */
-	private void start() {
+	public void start() {
 		try {
 			doConnect();
 		} catch (IOException e) {
@@ -101,7 +105,6 @@ public class ChatClient {
 			if (key.isConnectable()) {
 				if (socketChannel.finishConnect()) {
 					socketChannel.register(selector, SelectionKey.OP_READ);
-					new Thread(() -> sendMessage(socketChannel)).start();
 				} else {
 					// 连接失败，进程退出
 					System.exit(-1);
@@ -114,7 +117,7 @@ public class ChatClient {
 					byte[] bytes = new byte[readBuffer.remaining()];
 					readBuffer.get(bytes);
 					String body = new String(bytes, StandardCharsets.UTF_8);
-					System.out.println(body);
+					chatClientFrame.setText(body);
 				} else if (readBytes < 0) {
 					// 对端链路关闭
 					key.cancel();
@@ -138,7 +141,7 @@ public class ChatClient {
 	 * @author yanganyu
 	 * @date 2018/11/8 16:07
 	 */
-	private void stop() {
+	public void stop() {
 		running = false;
 		try {
 			bufferedReader.close();
@@ -148,56 +151,27 @@ public class ChatClient {
 		}
 	}
 
-	private void sendMessage(SocketChannel socketChannel) {
+	public void sendMessage(String text) {
 		try {
-			while (true) {
-				String text = bufferedReader.readLine();
-				if (text == null) {
-					System.out.println("!!!! read text error!!!!");
-					System.exit(-1);
-				}
-				text = text.trim();
-				if (StringUtils.isBlank(text)) {
-					continue;
-				}
-				if (Constant.STOP_COMMAND.equals(text)) {
-					this.stop();
-				}
-				byte[] req = (prefix + text).getBytes();
-				ByteBuffer writeBuffer = ByteBuffer.allocate(req.length);
-				writeBuffer.put(req);
-				writeBuffer.flip();
-				socketChannel.write(writeBuffer);
+			if (Constant.STOP_COMMAND.equals(text)) {
+				this.stop();
 			}
+			byte[] req = (sendMessagePrefix + text).getBytes();
+			ByteBuffer writeBuffer = ByteBuffer.allocate(req.length);
+			writeBuffer.put(req);
+			writeBuffer.flip();
+			socketChannel.write(writeBuffer);
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(-1);
 		}
 	}
 
-	public static void main(String[] args) {
-		ChatClient chatClient = new ChatClient();
-		CountDownLatch latch = new CountDownLatch(1);
-		System.out.print("please enter your username: ");
-		new Thread(() -> {
-			try {
-				String text = chatClient.bufferedReader.readLine();
-				if (text == null) {
-					System.out.println("!!!! read name error !!!!");
-					System.exit(-1);
-				}
-				chatClient.prefix = text.trim() + ": ";
-				latch.countDown();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}).start();
-		try {
-			latch.await();
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			e.printStackTrace();
-		}
-		chatClient.start();
+	public void setSendMessagePrefix(String sendMessagePrefix) {
+		this.sendMessagePrefix = sendMessagePrefix;
+	}
+
+	public String getSendMessagePrefix() {
+		return this.sendMessagePrefix;
 	}
 }
