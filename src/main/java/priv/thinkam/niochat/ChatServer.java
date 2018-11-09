@@ -93,9 +93,10 @@ public class ChatServer {
 				socketChannel.configureBlocking(false);
 				// Add the new connection to the selector
 				socketChannel.register(selector, SelectionKey.OP_READ);
-				String collectedMessage = socketChannel.socket().getInetAddress().getHostAddress() + ":" + socketChannel.socket().getPort() + " collected!!!";
-				System.out.println(collectedMessage);
-				sendMessageToAll(collectedMessage, socketChannel);
+				String connectedMessage =
+						socketChannel.socket().getInetAddress().getHostAddress() + ":" + socketChannel.socket().getPort() + " connected!!!";
+				System.out.println(connectedMessage);
+				sendMessageToAll(connectedMessage, socketChannel);
 				// send old server info to new
 				StringBuilder onlineMessage = new StringBuilder();
 				socketChannelSet.forEach(s -> onlineMessage.append(socketChannel.socket().getInetAddress().getHostAddress()).append(":").append(socketChannel.socket().getPort()).append(" is online!!!\n"));
@@ -125,10 +126,10 @@ public class ChatServer {
 		}
 	}
 
-	public void sendMessageToAll(String message, SocketChannel socketChannel) {
+	private void sendMessageToAll(String message, SocketChannel exceptedSocketChannel) {
 		socketChannelSet.forEach(s -> {
 			if (s.isOpen()) {
-				if (s != socketChannel) {
+				if (s != exceptedSocketChannel) {
 					sendMessage(s, message);
 				}
 			} else {

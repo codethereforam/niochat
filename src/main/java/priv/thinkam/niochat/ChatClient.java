@@ -1,6 +1,7 @@
 package priv.thinkam.niochat;
 
 import priv.thinkam.niochat.common.Constant;
+import priv.thinkam.niochat.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -49,7 +50,7 @@ public class ChatClient {
 	 * @author yanganyu
 	 * @date 2018/11/7 15:48
 	 */
-	public void start() {
+	private void start() {
 		try {
 			doConnect();
 		} catch (IOException e) {
@@ -156,6 +157,9 @@ public class ChatClient {
 					System.exit(-1);
 				}
 				text = text.trim();
+				if (StringUtils.isBlank(text)) {
+					continue;
+				}
 				if (Constant.STOP_COMMAND.equals(text)) {
 					this.stop();
 				}

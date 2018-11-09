@@ -25,10 +25,10 @@ public class StringUtils {
 	/**
 	 * whether a string is not blank
 	 *
-	 * @author yanganyu
-	 * @date 2018/11/8 15:03
 	 * @param str str
 	 * @return boolean
+	 * @author yanganyu
+	 * @date 2018/11/8 15:03
 	 */
 	public static boolean isNotBlank(String str) {
 		return !isBlank(str);
