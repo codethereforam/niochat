@@ -113,9 +113,12 @@ class ChatClient {
 					String body = new String(bytes, StandardCharsets.UTF_8);
 					chatClientFrame.setTextAreaText(body);
 				} else if (readBytes < 0) {
+					// deal server crash
+					chatClientFrame.dealServerCrash();
 					// 对端链路关闭
 					key.cancel();
 					socketChannel.close();
+					this.stop();
 				}
 
 				socketChannel.register(selector, SelectionKey.OP_READ);

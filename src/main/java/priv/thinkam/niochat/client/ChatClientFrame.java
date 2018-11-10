@@ -129,4 +129,14 @@ class ChatClientFrame extends Frame {
 		textAreaText.append(text).append("\n");
 		textArea.setText(textAreaText.toString());
 	}
+
+	/**
+	 * server crash
+	 */
+	void dealServerCrash() {
+		textArea.setForeground(Color.red);
+		textArea.setFont(new Font("Verdana", Font.BOLD, 24));
+		textArea.setText("Server crashes......");
+		textField.setEnabled(false);
+	}
 }
