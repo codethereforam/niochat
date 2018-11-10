@@ -28,13 +28,12 @@ import java.util.concurrent.Executors;
 public class ChatServer {
 	private Selector selector;
 	private Set<SocketChannel> socketChannelSet = new HashSet<>();
-	private ServerSocketChannel serverSocketChannel;
 	private volatile boolean running = true;
 
 	private ChatServer() {
 		try {
 			selector = Selector.open();
-			serverSocketChannel = ServerSocketChannel.open();
+			ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
 			serverSocketChannel.configureBlocking(false);
 			serverSocketChannel.socket().bind(new InetSocketAddress(Constant.SERVER_PORT));
 			serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
@@ -141,6 +140,10 @@ public class ChatServer {
 					System.out.println(message);
 					sendMessageToAll(message, socketChannel);
 				} else if (readBytes < 0) {
+					String exitMessage = socketChannel.socket().getInetAddress().getHostAddress() + ":" + socketChannel.socket().getPort() + " exited!!!";
+					System.out.println(exitMessage);
+					sendMessageToAll(exitMessage, null);
+					socketChannelSet.remove(socketChannel);
 					// close resource
 					selectionKey.cancel();
 					socketChannel.close();
@@ -158,11 +161,6 @@ public class ChatServer {
 				if (s != exceptedSocketChannel) {
 					sendMessage(s, message);
 				}
-			} else {
-				socketChannelSet.remove(s);
-				String exitMessage = s.socket().getInetAddress().getHostAddress() + ":" + s.socket().getPort() + " exited!!!";
-				System.out.println(exitMessage);
-				sendMessageToAll(exitMessage, null);
 			}
 		});
 	}
@@ -198,7 +196,7 @@ public class ChatServer {
 	private void stop() {
 		running = false;
 		try {
-			serverSocketChannel.close();
+			selector.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
