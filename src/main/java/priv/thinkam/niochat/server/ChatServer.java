@@ -118,13 +118,12 @@ public class ChatServer {
 				socketChannel.configureBlocking(false);
 				// Add the new connection to the selector
 				socketChannel.register(selector, SelectionKey.OP_READ);
-				String connectedMessage =
-						socketChannel.socket().getInetAddress().getHostAddress() + ":" + socketChannel.socket().getPort() + " connected!!!";
+				String connectedMessage = this.getSocketIpAndPort(socketChannel) + " connected!!!\n";
 				System.out.println(connectedMessage);
 				sendMessageToAll(connectedMessage, socketChannel);
 				// send old server info to new
 				StringBuilder onlineMessage = new StringBuilder();
-				socketChannelSet.forEach(s -> onlineMessage.append(socketChannel.socket().getInetAddress().getHostAddress()).append(":").append(socketChannel.socket().getPort()).append(" is online!!!\n"));
+				socketChannelSet.forEach(s -> onlineMessage.append(this.getSocketIpAndPort(s)).append(" is online!!!").append("\n"));
 				sendMessage(socketChannel, onlineMessage.toString());
 				socketChannelSet.add(socketChannel);
 			} else if (selectionKey.isReadable()) {
@@ -140,7 +139,7 @@ public class ChatServer {
 					System.out.println(message);
 					sendMessageToAll(message, socketChannel);
 				} else if (readBytes < 0) {
-					String exitMessage = socketChannel.socket().getInetAddress().getHostAddress() + ":" + socketChannel.socket().getPort() + " exited!!!";
+					String exitMessage = this.getSocketIpAndPort(socketChannel) + " exited!!!";
 					System.out.println(exitMessage);
 					sendMessageToAll(exitMessage, null);
 					socketChannelSet.remove(socketChannel);
@@ -153,6 +152,17 @@ public class ChatServer {
 				System.exit(-1);
 			}
 		}
+	}
+
+	/**
+	 * get ip:port
+	 *
+	 * @return java.lang.String
+	 * @author yanganyu
+	 * @date 11/10/18 8:11 PM
+	 */
+	private String getSocketIpAndPort(SocketChannel socketChannel) {
+		return socketChannel.socket().getInetAddress().getHostAddress() + ":" + socketChannel.socket().getPort();
 	}
 
 	private void sendMessageToAll(String message, SocketChannel exceptedSocketChannel) {

@@ -60,6 +60,7 @@ class ChatClientFrame extends Frame {
 			}
 		});
 		this.setVisible(true);
+		textField.requestFocusInWindow();
 	}
 
 	/**
@@ -73,7 +74,6 @@ class ChatClientFrame extends Frame {
 		textField.setBackground(new Color(23, 33, 43));
 		textField.setForeground(Color.white);
 		textField.setPreferredSize(new Dimension(0, 30));
-		textField.requestFocusInWindow();
 		textField.addActionListener(e -> {
 			String text = textField.getText().trim();
 			textField.setText(StringUtils.EMPTY_STRING);
@@ -87,7 +87,8 @@ class ChatClientFrame extends Frame {
 				hasName = true;
 				chatClient.setSendMessagePrefix(text + ": ");
 				textAreaText.append(text).append("\n");
-				textAreaText.append("chat start...").append("\n");
+				textAreaText.append("username: ").append(text).append("\n")
+						.append("chat start...").append("\n");
 				textArea.setText(textAreaText.toString());
 			}
 		});
