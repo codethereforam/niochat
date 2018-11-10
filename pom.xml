@@ -55,7 +55,7 @@
                             <appendAssemblyId>false</appendAssemblyId>
                             <archive>
                                 <manifest>
-                                    <mainClass>priv.thinkam.niochat.client.ChatClientFrame</mainClass>
+                                    <mainClass>priv.thinkam.niochat.client.ChatClient</mainClass>
                                 </manifest>
                             </archive>
                             <descriptorRefs>

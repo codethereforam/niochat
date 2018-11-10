@@ -16,6 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * chat server
@@ -41,6 +43,30 @@ public class ChatServer {
 			System.exit(-1);
 		}
 		System.out.println("==== chat server start ====");
+	}
+
+	public static void main(String[] args) {
+		ChatServer chatServer = new ChatServer();
+		// listen stop command
+		ExecutorService pool = Executors.newSingleThreadExecutor();
+		pool.execute(() -> {
+			try (
+					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in))
+			) {
+				while (true) {
+					String command = bufferedReader.readLine();
+					if (command != null && Constant.STOP_COMMAND.equals(command.trim())) {
+						chatServer.stop();
+						break;
+					} else {
+						System.out.println("!!!! invalid command !!!!");
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+		chatServer.start();
 	}
 
 	/**
@@ -176,30 +202,6 @@ public class ChatServer {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	}
-
-
-	public static void main(String[] args) {
-		ChatServer chatServer = new ChatServer();
-		// listen stop command
-		new Thread(() -> {
-			try (
-					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in))
-			) {
-				while (true) {
-					String command = bufferedReader.readLine();
-					if (command != null && Constant.STOP_COMMAND.equals(command.trim())) {
-						chatServer.stop();
-						break;
-					} else {
-						System.out.println("!!!! invalid command !!!!");
-					}
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}).start();
-		chatServer.start();
 	}
 
 }

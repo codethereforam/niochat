@@ -2,9 +2,7 @@ package priv.thinkam.niochat.client;
 
 import priv.thinkam.niochat.common.Constant;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -20,7 +18,7 @@ import java.util.Set;
  * @author yanganyu
  * @date 2018/11/7 15:04
  */
-public class ChatClient {
+class ChatClient {
 	/**
 	 * server IP
 	 */
@@ -28,16 +26,11 @@ public class ChatClient {
 	private Selector selector;
 	private SocketChannel socketChannel;
 	private String sendMessagePrefix;
-	private BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
 	private volatile boolean running = true;
 
 	private ChatClientFrame chatClientFrame;
 
-	public void setChatClientFrame(ChatClientFrame chatClientFrame) {
-		this.chatClientFrame = chatClientFrame;
-	}
-
-	public ChatClient() {
+	private ChatClient() {
 		try {
 			selector = Selector.open();
 			socketChannel = SocketChannel.open();
@@ -48,13 +41,24 @@ public class ChatClient {
 		}
 	}
 
+	public static void main(String[] args) {
+		ChatClient chatClient = new ChatClient();
+		ChatClientFrame chatClientFrame = new ChatClientFrame(chatClient);
+		chatClient.setChatClientFrame(chatClientFrame);
+		chatClient.start();
+	}
+
+	private void setChatClientFrame(ChatClientFrame chatClientFrame) {
+		this.chatClientFrame = chatClientFrame;
+	}
+
 	/**
 	 * client thread
 	 *
 	 * @author yanganyu
 	 * @date 2018/11/7 15:48
 	 */
-	public void start() {
+	private void start() {
 		try {
 			doConnect();
 		} catch (IOException e) {
@@ -86,16 +90,6 @@ public class ChatClient {
 				System.exit(1);
 			}
 		}
-
-		// 多路复用器关闭后，所有注册在上面的Channel和Pipe等资源都会被自动去注册并关闭，所以不需要重复释放资源
-//		if (selector != null) {
-//			try {
-//				selector.close();
-//			} catch (IOException e) {
-//				e.printStackTrace();
-//			}
-//	}
-
 	}
 
 	private void handleInput(SelectionKey key) throws IOException {
@@ -117,7 +111,7 @@ public class ChatClient {
 					byte[] bytes = new byte[readBuffer.remaining()];
 					readBuffer.get(bytes);
 					String body = new String(bytes, StandardCharsets.UTF_8);
-					chatClientFrame.setText(body);
+					chatClientFrame.setTextAreaText(body);
 				} else if (readBytes < 0) {
 					// 对端链路关闭
 					key.cancel();
@@ -141,21 +135,25 @@ public class ChatClient {
 	 * @author yanganyu
 	 * @date 2018/11/8 16:07
 	 */
-	public void stop() {
+	void stop() {
 		running = false;
-		try {
-			bufferedReader.close();
-			socketChannel.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (selector != null) {
+			try {
+				selector.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
-	public void sendMessage(String text) {
+	/**
+	 * send message to server
+	 *
+	 * @author yanganyu
+	 * @date 11/10/18 10:22 AM
+	 */
+	void sendMessageToServer(String text) {
 		try {
-			if (Constant.STOP_COMMAND.equals(text)) {
-				this.stop();
-			}
 			byte[] req = (sendMessagePrefix + text).getBytes();
 			ByteBuffer writeBuffer = ByteBuffer.allocate(req.length);
 			writeBuffer.put(req);
@@ -167,11 +165,14 @@ public class ChatClient {
 		}
 	}
 
-	public void setSendMessagePrefix(String sendMessagePrefix) {
+	/**
+	 * set send message prefix
+	 *
+	 * @param sendMessagePrefix sendMessagePrefix
+	 * @author yanganyu
+	 * @date 11/10/18 10:30 AM
+	 */
+	void setSendMessagePrefix(String sendMessagePrefix) {
 		this.sendMessagePrefix = sendMessagePrefix;
-	}
-
-	public String getSendMessagePrefix() {
-		return this.sendMessagePrefix;
 	}
 }
