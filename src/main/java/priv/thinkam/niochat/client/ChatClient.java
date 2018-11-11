@@ -1,6 +1,7 @@
 package priv.thinkam.niochat.client;
 
 import priv.thinkam.niochat.common.Constant;
+import priv.thinkam.niochat.util.AESUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -23,6 +24,7 @@ class ChatClient {
 	 * server IP
 	 */
 	private static final String SERVER_IP = "127.0.0.1";
+	private static final String AES_SECRET_KEY = "123456789123456789";
 	private Selector selector;
 	private SocketChannel socketChannel;
 	private String sendMessagePrefix;
@@ -124,7 +126,13 @@ class ChatClient {
 					byte[] bytes = new byte[readBuffer.remaining()];
 					readBuffer.get(bytes);
 					String body = new String(bytes, StandardCharsets.UTF_8);
-					chatClientFrame.setTextAreaText(body);
+					String decryptedMessage;
+					try {
+						decryptedMessage = AESUtils.decrypt(body, AES_SECRET_KEY);
+					} catch (Exception e) {
+						decryptedMessage = body;
+					}
+					chatClientFrame.setTextAreaText(decryptedMessage);
 				} else if (readBytes < 0) {
 					// deal server crash
 					chatClientFrame.dealServerCrash();
@@ -172,7 +180,11 @@ class ChatClient {
 	 */
 	void sendMessageToServer(String text) {
 		try {
-			byte[] req = (sendMessagePrefix + text).getBytes();
+			String encryptedString = AESUtils.encrypt((sendMessagePrefix + text), AES_SECRET_KEY);
+			if(encryptedString == null) {
+				System.exit(-1);
+			}
+			byte[] req = encryptedString.getBytes();
 			ByteBuffer writeBuffer = ByteBuffer.allocate(req.length);
 			writeBuffer.put(req);
 			writeBuffer.flip();
