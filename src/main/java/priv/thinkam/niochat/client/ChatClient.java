@@ -69,7 +69,7 @@ class ChatClient {
 		while (running) {
 			try {
 				selector.select(1000);
-				if(!selector.isOpen()) {
+				if (!selector.isOpen()) {
 					return;
 				}
 				Set<SelectionKey> selectedKeys = selector.selectedKeys();
@@ -81,6 +81,7 @@ class ChatClient {
 					try {
 						handleInput(key);
 					} catch (Exception e) {
+						e.printStackTrace();
 						if (key != null) {
 							key.cancel();
 							if (key.channel() != null) {
@@ -101,11 +102,19 @@ class ChatClient {
 			// 判断是否连接成功
 			SocketChannel socketChannel = (SocketChannel) key.channel();
 			if (key.isConnectable()) {
-				if (socketChannel.finishConnect()) {
+				boolean finishConnected = false;
+				try {
+					finishConnected = socketChannel.finishConnect();
+				} catch (IOException e) {
+					System.out.println("can not connected to server...");
+					e.printStackTrace();
+				}
+				if (finishConnected) {
 					socketChannel.register(selector, SelectionKey.OP_READ);
 				} else {
-					// 连接失败，进程退出
-					System.exit(-1);
+					// connect fail
+					chatClientFrame.dealServerCrash();
+					this.stop();
 				}
 			} else if (key.isReadable()) {
 				ByteBuffer readBuffer = ByteBuffer.allocate(1024);
@@ -143,12 +152,14 @@ class ChatClient {
 	 * @date 2018/11/8 16:07
 	 */
 	void stop() {
-		running = false;
-		if (selector != null) {
-			try {
-				selector.close();
-			} catch (IOException e) {
-				e.printStackTrace();
+		if (running) {
+			running = false;
+			if (selector != null) {
+				try {
+					selector.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 	}

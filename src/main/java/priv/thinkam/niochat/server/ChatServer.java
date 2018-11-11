@@ -3,9 +3,7 @@ package priv.thinkam.niochat.server;
 import priv.thinkam.niochat.common.Constant;
 import priv.thinkam.niochat.util.StringUtils;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -16,8 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * chat server
@@ -28,7 +24,6 @@ import java.util.concurrent.Executors;
 public class ChatServer {
 	private Selector selector;
 	private Set<SocketChannel> socketChannelSet = new HashSet<>();
-	private volatile boolean running = true;
 
 	private ChatServer() {
 		try {
@@ -55,7 +50,7 @@ public class ChatServer {
 	 * @date 2018/11/7 15:21
 	 */
 	private void start() {
-		while (running) {
+		while (true) {
 			try {
 				selector.select(1000);
 				if(!selector.isOpen()) {
