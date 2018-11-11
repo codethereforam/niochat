@@ -14,8 +14,4 @@ public class Constant {
 	 * server listening port
 	 */
 	public static final int SERVER_PORT = 7777;
-	/**
-	 * stop command
-	 */
-	public static final String STOP_COMMAND = "stop";
 }

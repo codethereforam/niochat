@@ -45,27 +45,7 @@ public class ChatServer {
 	}
 
 	public static void main(String[] args) {
-		ChatServer chatServer = new ChatServer();
-		// listen stop command
-		ExecutorService pool = Executors.newSingleThreadExecutor();
-		pool.execute(() -> {
-			try (
-					BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in))
-			) {
-				while (true) {
-					String command = bufferedReader.readLine();
-					if (command != null && Constant.STOP_COMMAND.equals(command.trim())) {
-						chatServer.stop();
-						break;
-					} else {
-						System.out.println("!!!! invalid command !!!!");
-					}
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		});
-		chatServer.start();
+		new ChatServer().start();
 	}
 
 	/**
@@ -78,6 +58,9 @@ public class ChatServer {
 		while (running) {
 			try {
 				selector.select(1000);
+				if(!selector.isOpen()) {
+					return;
+				}
 				Set<SelectionKey> selectionKeySet = selector.selectedKeys();
 				Iterator<SelectionKey> selectionKeyIterator = selectionKeySet.iterator();
 				SelectionKey key;
@@ -196,20 +179,4 @@ public class ChatServer {
 			}
 		}
 	}
-
-	/**
-	 * stop server
-	 *
-	 * @author yanganyu
-	 * @date 2018/11/8 15:11
-	 */
-	private void stop() {
-		running = false;
-		try {
-			selector.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
 }

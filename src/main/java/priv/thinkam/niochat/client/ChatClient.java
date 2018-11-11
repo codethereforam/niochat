@@ -46,6 +46,7 @@ class ChatClient {
 		ChatClientFrame chatClientFrame = new ChatClientFrame(chatClient);
 		chatClient.setChatClientFrame(chatClientFrame);
 		chatClient.start();
+		System.out.println("client disconnected...");
 	}
 
 	private void setChatClientFrame(ChatClientFrame chatClientFrame) {
@@ -68,6 +69,9 @@ class ChatClient {
 		while (running) {
 			try {
 				selector.select(1000);
+				if(!selector.isOpen()) {
+					return;
+				}
 				Set<SelectionKey> selectedKeys = selector.selectedKeys();
 				Iterator<SelectionKey> it = selectedKeys.iterator();
 				SelectionKey key;
