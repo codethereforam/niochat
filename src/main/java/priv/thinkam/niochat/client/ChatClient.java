@@ -20,13 +20,13 @@ import java.util.Set;
  * @date 2018/11/7 15:04
  */
 class ChatClient {
-	/**
-	 * server IP
-	 */
 	private static final String SERVER_IP = "127.0.0.1";
 	private static final String AES_SECRET_KEY = "123456789123456789";
 	private Selector selector;
 	private SocketChannel socketChannel;
+	/**
+	 * like "username: "
+	 */
 	private String sendMessagePrefix;
 	private volatile boolean running = true;
 
@@ -66,85 +66,109 @@ class ChatClient {
 			doConnect();
 		} catch (IOException e) {
 			e.printStackTrace();
+			this.close();
 			System.exit(-1);
 		}
 		while (running) {
 			try {
 				selector.select(1000);
-				if (!selector.isOpen()) {
-					return;
-				}
-				Set<SelectionKey> selectedKeys = selector.selectedKeys();
-				Iterator<SelectionKey> it = selectedKeys.iterator();
-				SelectionKey key;
-				while (it.hasNext()) {
-					key = it.next();
-					it.remove();
-					try {
-						handleInput(key);
-					} catch (Exception e) {
-						e.printStackTrace();
-						if (key != null) {
-							key.cancel();
-							if (key.channel() != null) {
-								key.channel().close();
-							}
-						}
-					}
-				}
-			} catch (Exception e) {
+			} catch (IOException e) {
 				e.printStackTrace();
-				System.exit(1);
+				this.close();
+				return;
+			}
+			if (!selector.isOpen()) {
+				return;
+			}
+			Set<SelectionKey> selectedKeys = selector.selectedKeys();
+			Iterator<SelectionKey> it = selectedKeys.iterator();
+			SelectionKey selectionKey;
+			while (it.hasNext()) {
+				selectionKey = it.next();
+				it.remove();
+				try {
+					handleSelectionKey(selectionKey);
+				} catch (Exception e) {
+					e.printStackTrace();
+					this.closeSelectionKey(selectionKey);
+				}
 			}
 		}
 	}
 
-	private void handleInput(SelectionKey key) throws IOException {
-		if (key.isValid()) {
-			// 判断是否连接成功
-			SocketChannel socketChannel = (SocketChannel) key.channel();
-			if (key.isConnectable()) {
+	private void closeSelectionKey(SelectionKey selectionKey) {
+		if (selectionKey != null) {
+			selectionKey.cancel();
+			if (selectionKey.channel() != null) {
+				try {
+					selectionKey.channel().close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	private void handleSelectionKey(SelectionKey selectionKey) throws IOException {
+		if (selectionKey.isValid()) {
+			SocketChannel sc = (SocketChannel) selectionKey.channel();
+			if (selectionKey.isConnectable()) {
 				boolean finishConnected = false;
 				try {
-					finishConnected = socketChannel.finishConnect();
+					finishConnected = sc.finishConnect();
 				} catch (IOException e) {
 					System.out.println("can not connected to server...");
 					e.printStackTrace();
 				}
 				if (finishConnected) {
-					socketChannel.register(selector, SelectionKey.OP_READ);
+					sc.register(selector, SelectionKey.OP_READ);
 				} else {
 					// connect fail
-					chatClientFrame.dealServerCrash();
-					this.stop();
+					chatClientFrame.handleServerCrash();
+					this.close();
 				}
-			} else if (key.isReadable()) {
+			} else if (selectionKey.isReadable()) {
 				ByteBuffer readBuffer = ByteBuffer.allocate(1024);
-				int readBytes = socketChannel.read(readBuffer);
-				if (readBytes > 0) {
-					readBuffer.flip();
-					byte[] bytes = new byte[readBuffer.remaining()];
-					readBuffer.get(bytes);
-					String body = new String(bytes, StandardCharsets.UTF_8);
-					String decryptedMessage;
-					try {
-						decryptedMessage = AESUtils.decrypt(body, AES_SECRET_KEY);
-					} catch (Exception e) {
-						decryptedMessage = body;
-					}
-					chatClientFrame.setTextAreaText(decryptedMessage);
-				} else if (readBytes < 0) {
-					// deal server crash
-					chatClientFrame.dealServerCrash();
-					// 对端链路关闭
-					key.cancel();
-					socketChannel.close();
-					this.stop();
+				int readBytes;
+				try {
+					readBytes = sc.read(readBuffer);
+				} catch (IOException e) {
+					this.handleServerCrashAndClose(sc, selectionKey);
+					e.printStackTrace();
+					return;
 				}
-
-				socketChannel.register(selector, SelectionKey.OP_READ);
+				if (readBytes > 0) {
+					this.handleReceivedMessage(readBuffer);
+				} else if (readBytes < 0) {
+					this.handleServerCrashAndClose(sc, selectionKey);
+				}
 			}
 		}
+	}
+
+	private void handleReceivedMessage(ByteBuffer readBuffer) {
+		readBuffer.flip();
+		byte[] bytes = new byte[readBuffer.remaining()];
+		readBuffer.get(bytes);
+		String body = new String(bytes, StandardCharsets.UTF_8);
+		String decryptedMessage;
+		try {
+			decryptedMessage = AESUtils.decrypt(body, AES_SECRET_KEY);
+		} catch (Exception e) {
+			decryptedMessage = body;
+		}
+		chatClientFrame.setTextAreaText(decryptedMessage);
+	}
+
+	private void handleServerCrashAndClose(SocketChannel socketChannel, SelectionKey selectionKey) {
+		chatClientFrame.handleServerCrash();
+		selectionKey.cancel();
+		try {
+			socketChannel.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		this.close();
 	}
 
 	private void doConnect() throws IOException {
@@ -154,12 +178,12 @@ class ChatClient {
 	}
 
 	/**
-	 * stop client
+	 * close clint
 	 *
 	 * @author yanganyu
 	 * @date 2018/11/8 16:07
 	 */
-	void stop() {
+	void close() {
 		if (running) {
 			running = false;
 			if (selector != null) {
@@ -181,7 +205,7 @@ class ChatClient {
 	void sendMessageToServer(String text) {
 		try {
 			String encryptedString = AESUtils.encrypt((sendMessagePrefix + text), AES_SECRET_KEY);
-			if(encryptedString == null) {
+			if (encryptedString == null) {
 				System.exit(-1);
 			}
 			byte[] req = encryptedString.getBytes();

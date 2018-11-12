@@ -24,6 +24,9 @@ public class StringUtils {
 	 * @date 2018/11/8 13:53
 	 */
 	public static boolean isBlank(String str) {
+		if (str == null) {
+			return true;
+		}
 		return str.trim().length() == 0;
 	}
 

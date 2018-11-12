@@ -55,7 +55,7 @@ class ChatClientFrame extends Frame {
 		this.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				chatClient.stop();
+				chatClient.close();
 				System.exit(0);
 			}
 		});
@@ -134,7 +134,7 @@ class ChatClientFrame extends Frame {
 	/**
 	 * server crash
 	 */
-	void dealServerCrash() {
+	void handleServerCrash() {
 		textArea.setForeground(Color.red);
 		textArea.setFont(new Font("Verdana", Font.BOLD, 24));
 		textArea.setText("Server crashes......");
