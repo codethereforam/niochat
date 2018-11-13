@@ -6,6 +6,7 @@ import priv.thinkam.niochat.util.AESUtils;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -63,86 +64,95 @@ class ChatClient {
 	 */
 	private void start() {
 		try {
-			doConnect();
+			this.connect();
 		} catch (IOException e) {
 			e.printStackTrace();
 			this.close();
 			System.exit(-1);
 		}
 		while (running) {
+			int readyChannelCount;
 			try {
-				selector.select(1000);
+				readyChannelCount = selector.select(1000);
 			} catch (IOException e) {
 				e.printStackTrace();
 				this.close();
 				return;
 			}
+			if (readyChannelCount == 0) {
+				continue;
+			}
 			if (!selector.isOpen()) {
 				return;
 			}
-			Set<SelectionKey> selectedKeys = selector.selectedKeys();
-			Iterator<SelectionKey> it = selectedKeys.iterator();
-			SelectionKey selectionKey;
-			while (it.hasNext()) {
-				selectionKey = it.next();
-				it.remove();
-				try {
-					handleSelectionKey(selectionKey);
-				} catch (Exception e) {
-					e.printStackTrace();
-					this.closeSelectionKey(selectionKey);
-				}
+			this.handleSelectedKeys();
+		}
+	}
+
+	private void handleSelectedKeys() {
+		Set<SelectionKey> selectedKeys = selector.selectedKeys();
+		Iterator<SelectionKey> keyIterator = selectedKeys.iterator();
+		SelectionKey selectionKey;
+		while (keyIterator.hasNext()) {
+			selectionKey = keyIterator.next();
+			keyIterator.remove();
+			try {
+				handleSelectionKey(selectionKey);
+			} catch (Exception e) {
+				e.printStackTrace();
+				this.closeSelectionKey(selectionKey);
 			}
 		}
 	}
 
-	private void closeSelectionKey(SelectionKey selectionKey) {
-		if (selectionKey != null) {
-			selectionKey.cancel();
-			if (selectionKey.channel() != null) {
-				try {
-					selectionKey.channel().close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
-
-	private void handleSelectionKey(SelectionKey selectionKey) throws IOException {
+	private void handleSelectionKey(SelectionKey selectionKey) {
 		if (selectionKey.isValid()) {
-			SocketChannel sc = (SocketChannel) selectionKey.channel();
 			if (selectionKey.isConnectable()) {
-				boolean finishConnected = false;
-				try {
-					finishConnected = sc.finishConnect();
-				} catch (IOException e) {
-					System.out.println("can not connected to server...");
-					e.printStackTrace();
-				}
-				if (finishConnected) {
-					sc.register(selector, SelectionKey.OP_READ);
-				} else {
-					// connect fail
-					chatClientFrame.handleServerCrash();
-					this.close();
-				}
+				this.handleConnectableKey(selectionKey);
 			} else if (selectionKey.isReadable()) {
-				ByteBuffer readBuffer = ByteBuffer.allocate(1024);
-				int readBytes;
-				try {
-					readBytes = sc.read(readBuffer);
-				} catch (IOException e) {
-					this.handleServerCrashAndClose(sc, selectionKey);
-					e.printStackTrace();
-					return;
-				}
-				if (readBytes > 0) {
-					this.handleReceivedMessage(readBuffer);
-				} else if (readBytes < 0) {
-					this.handleServerCrashAndClose(sc, selectionKey);
-				}
+				this.handleReadableKey(selectionKey);
 			}
+		}
+	}
+
+	private void handleConnectableKey(SelectionKey selectionKey) {
+		SocketChannel sc = (SocketChannel) selectionKey.channel();
+		boolean finishConnected = false;
+		try {
+			finishConnected = sc.finishConnect();
+		} catch (IOException e) {
+			System.out.println("can not connected to server...");
+			e.printStackTrace();
+		}
+		if (finishConnected) {
+			try {
+				sc.register(selector, SelectionKey.OP_READ);
+			} catch (ClosedChannelException e) {
+				this.handleServerCrashAndClose(selectionKey);
+				e.printStackTrace();
+			}
+		} else {
+			// connect fail
+			chatClientFrame.handleServerCrash();
+			this.close();
+		}
+	}
+
+	private void handleReadableKey(SelectionKey selectionKey) {
+		SocketChannel sc = (SocketChannel) selectionKey.channel();
+		ByteBuffer readBuffer = ByteBuffer.allocate(1024);
+		int readBytes;
+		try {
+			readBytes = sc.read(readBuffer);
+		} catch (IOException e) {
+			this.handleServerCrashAndClose(selectionKey);
+			e.printStackTrace();
+			return;
+		}
+		if (readBytes > 0) {
+			this.handleReceivedMessage(readBuffer);
+		} else if (readBytes < 0) {
+			this.handleServerCrashAndClose(selectionKey);
 		}
 	}
 
@@ -160,18 +170,25 @@ class ChatClient {
 		chatClientFrame.setTextAreaText(decryptedMessage);
 	}
 
-	private void handleServerCrashAndClose(SocketChannel socketChannel, SelectionKey selectionKey) {
+	private void handleServerCrashAndClose(SelectionKey selectionKey) {
 		chatClientFrame.handleServerCrash();
-		selectionKey.cancel();
-		try {
-			socketChannel.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		this.close();
+		this.closeSelectionKey(selectionKey);
 	}
 
-	private void doConnect() throws IOException {
+	private void closeSelectionKey(SelectionKey selectionKey) {
+		if (selectionKey != null) {
+			selectionKey.cancel();
+			if (selectionKey.channel() != null) {
+				try {
+					selectionKey.channel().close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	private void connect() throws IOException {
 		if (!socketChannel.connect(new InetSocketAddress(SERVER_IP, Constant.SERVER_PORT))) {
 			socketChannel.register(selector, SelectionKey.OP_CONNECT);
 		}

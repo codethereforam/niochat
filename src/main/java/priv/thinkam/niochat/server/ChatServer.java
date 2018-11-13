@@ -53,30 +53,33 @@ public class ChatServer {
 	 */
 	private void start() {
 		while (true) {
+			int readyChannelCount;
 			try {
-				selector.select(1000);
+				readyChannelCount = selector.select(1000);
 			} catch (IOException e) {
 				e.printStackTrace();
 				this.close();
 				return;
 			}
+			if (readyChannelCount == 0) {
+				continue;
+			}
 			if (!selector.isOpen()) {
 				this.close();
 				return;
 			}
-			Set<SelectionKey> selectionKeySet = selector.selectedKeys();
-			Iterator<SelectionKey> selectionKeyIterator = selectionKeySet.iterator();
-			SelectionKey selectionKey;
-			while (selectionKeyIterator.hasNext()) {
-				selectionKey = selectionKeyIterator.next();
-				selectionKeyIterator.remove();
-				try {
-					handleSelectionKey(selectionKey);
-				} catch (Exception e) {
-					e.printStackTrace();
-					this.closeSelectionKey(selectionKey);
-				}
-			}
+			this.handleSelectedKeys();
+		}
+	}
+
+	private void handleSelectedKeys() {
+		Set<SelectionKey> selectionKeySet = selector.selectedKeys();
+		Iterator<SelectionKey> keyIterator = selectionKeySet.iterator();
+		SelectionKey selectionKey;
+		while (keyIterator.hasNext()) {
+			selectionKey = keyIterator.next();
+			this.handleSelectionKey(selectionKey);
+			keyIterator.remove();
 		}
 	}
 
@@ -100,39 +103,64 @@ public class ChatServer {
 	 * @author yanganyu
 	 * @date 2018/11/7 15:37
 	 */
-	private void handleSelectionKey(SelectionKey selectionKey) throws IOException {
+	private void handleSelectionKey(SelectionKey selectionKey) {
 		if (selectionKey.isValid()) {
 			if (selectionKey.isAcceptable()) {
-				// Accept the new connection
-				ServerSocketChannel serverSocketChannel = (ServerSocketChannel) selectionKey.channel();
-				SocketChannel socketChannel = serverSocketChannel.accept();
-				socketChannel.configureBlocking(false);
-				// Add the new connection to the selector
-				socketChannel.register(selector, SelectionKey.OP_READ);
-				this.sendConnectedInfoToAll(socketChannel);
-				this.sendOnlineInfoToNew(socketChannel);
-				socketChannelSet.add(socketChannel);
+				this.handleAcceptableKey(selectionKey);
 			} else if (selectionKey.isReadable()) {
-				// Read the data
-				SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
-				ByteBuffer readBuffer = ByteBuffer.allocate(1024);
-				int readBytes;
-				try {
-					readBytes = socketChannel.read(readBuffer);
-				} catch (IOException e) {
-					handleClientDisconnect(socketChannel, selectionKey);
-					e.printStackTrace();
-					return;
-				}
-				if (readBytes > 0) {
-					this.handleReceivedMessage(readBuffer, socketChannel);
-				} else if (readBytes < 0) {
-					handleClientDisconnect(socketChannel, selectionKey);
-				}
+				this.handleReadableKey(selectionKey);
 			} else {
 				System.out.println("!!! something wrong !!!");
 				System.exit(-1);
 			}
+		}
+	}
+
+	private void handleAcceptableKey(SelectionKey selectionKey) {
+		// Accept the new connection
+		ServerSocketChannel serverSocketChannel = (ServerSocketChannel) selectionKey.channel();
+		SocketChannel socketChannel = null;
+		try {
+			socketChannel = serverSocketChannel.accept();
+			socketChannel.configureBlocking(false);
+			// Add the new connection to the selector
+			socketChannel.register(selector, SelectionKey.OP_READ);
+
+		} catch (IOException e) {
+			this.closeSelectionKey(selectionKey);
+			if (socketChannel != null) {
+				try {
+					socketChannel.close();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}
+			e.printStackTrace();
+		}
+		if (socketChannel == null) {
+			return;
+		}
+		this.sendConnectedInfoToAll(socketChannel);
+		this.sendOnlineInfoToNew(socketChannel);
+		socketChannelSet.add(socketChannel);
+	}
+
+	private void handleReadableKey(SelectionKey selectionKey) {
+		// Read the data
+		SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
+		ByteBuffer readBuffer = ByteBuffer.allocate(1024);
+		int readBytes;
+		try {
+			readBytes = socketChannel.read(readBuffer);
+		} catch (IOException e) {
+			handleClientDisconnect(socketChannel, selectionKey);
+			e.printStackTrace();
+			return;
+		}
+		if (readBytes > 0) {
+			this.handleReceivedMessage(readBuffer, socketChannel);
+		} else if (readBytes < 0) {
+			handleClientDisconnect(socketChannel, selectionKey);
 		}
 	}
 
@@ -178,7 +206,7 @@ public class ChatServer {
 	 * @date 2018/11/12 14:30
 	 */
 	private void sendConnectedInfoToAll(SocketChannel socketChannel) {
-		String connectedMessage = this.getSocketIpAndPort(socketChannel) + " connected!!!\n";
+		String connectedMessage = this.getSocketIpAndPort(socketChannel) + " connected!!!" + System.lineSeparator();
 		System.out.println(connectedMessage);
 		sendMessageToAll(connectedMessage, socketChannel);
 	}
@@ -192,7 +220,7 @@ public class ChatServer {
 	 */
 	private void sendOnlineInfoToNew(SocketChannel socketChannel) {
 		StringBuilder onlineMessage = new StringBuilder();
-		socketChannelSet.forEach(s -> onlineMessage.append(this.getSocketIpAndPort(s)).append(" is online!!!").append("\n"));
+		socketChannelSet.forEach(s -> onlineMessage.append(this.getSocketIpAndPort(s)).append(" is online!!!").append(System.lineSeparator()));
 		sendMessage(socketChannel, onlineMessage.toString());
 	}
 

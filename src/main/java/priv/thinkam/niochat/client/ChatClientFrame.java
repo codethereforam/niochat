@@ -79,16 +79,16 @@ class ChatClientFrame extends Frame {
 			textField.setText(StringUtils.EMPTY_STRING);
 			if (hasName) {
 				if (StringUtils.isNotBlank(text)) {
-					textAreaText.append("me: ").append(text).append("\n");
+					textAreaText.append("me: ").append(text).append(System.lineSeparator());
 					textArea.setText(textAreaText.toString());
 					chatClient.sendMessageToServer(text);
 				}
 			} else {
 				hasName = true;
 				chatClient.setSendMessagePrefix(text + ": ");
-				textAreaText.append(text).append("\n");
-				textAreaText.append("username: ").append(text).append("\n")
-						.append("chat start...").append("\n");
+				textAreaText.append(text).append(System.lineSeparator());
+				textAreaText.append("username: ").append(text).append(System.lineSeparator())
+						.append("chat start...").append(System.lineSeparator());
 				textArea.setText(textAreaText.toString());
 			}
 		});
@@ -102,8 +102,8 @@ class ChatClientFrame extends Frame {
 	 */
 	private void initTextAreaText() {
 		textAreaText = new StringBuilder();
-		textAreaText.append("wait counterpart online...").append("\n");
-		textAreaText.append("please enter your username: ").append("\n");
+		textAreaText.append("wait counterpart online...").append(System.lineSeparator());
+		textAreaText.append("please enter your username: ").append(System.lineSeparator());
 	}
 
 	/**
@@ -127,7 +127,7 @@ class ChatClientFrame extends Frame {
 	 * @date 11/10/18 10:12 AM
 	 */
 	void setTextAreaText(String text) {
-		textAreaText.append(text).append("\n");
+		textAreaText.append(text).append(System.lineSeparator());
 		textArea.setText(textAreaText.toString());
 	}
 
