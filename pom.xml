@@ -49,13 +49,36 @@
                             <finalName>chat-server</finalName>
                             <archive>
                                 <manifest>
-                                    <mainClass>priv.thinkam.niochat.server.ChatServer</mainClass>
+                                    <mainClass>priv.thinkam.niochat.nio.server.ChatServer</mainClass>
                                     <addClasspath>true</addClasspath>
                                 </manifest>
                             </archive>
-                            <excludes>
-                                <exclude>**/client/**</exclude>
-                            </excludes>
+                            <includes>
+                                <include>**/nio/server/**</include>
+                                <include>**/common/**</include>
+                                <include>**/util/**</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>build-netty-server</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>netty-chat-server</finalName>
+                            <archive>
+                                <manifest>
+                                    <mainClass>priv.thinkam.niochat.netty.server.NettyChatServer</mainClass>
+                                    <addClasspath>true</addClasspath>
+                                </manifest>
+                            </archive>
+                            <includes>
+                                <include>**/netty/server/**</include>
+                                <include>**/common/**</include>
+                                <include>**/util/**</include>
+                            </includes>
                         </configuration>
                     </execution>
                     <execution>
@@ -68,13 +91,15 @@
                             <finalName>chat-client</finalName>
                             <archive>
                                 <manifest>
-                                    <mainClass>priv.thinkam.niochat.client.ChatClient</mainClass>
+                                    <mainClass>priv.thinkam.niochat.nio.client.ChatClient</mainClass>
                                     <addClasspath>true</addClasspath>
                                 </manifest>
                             </archive>
-                            <excludes>
-                                <exclude>**/server/**</exclude>
-                            </excludes>
+                            <includes>
+                                <include>**/nio/client/**</include>
+                                <include>**/common/**</include>
+                                <include>**/util/**</include>
+                            </includes>
                         </configuration>
                     </execution>
                     <execution>
@@ -87,12 +112,14 @@
                             <finalName>decrypt-tool</finalName>
                             <archive>
                                 <manifest>
-                                    <mainClass>priv.thinkam.niochat.util.DecryptTool</mainClass>
+                                    <mainClass>priv.thinkam.niochat.tool.DecryptTool</mainClass>
                                     <addClasspath>true</addClasspath>
                                 </manifest>
                             </archive>
                             <includes>
-                                <include>**/util/*</include>
+                                <include>**/tool/**</include>
+                                <include>**/common/**</include>
+                                <include>**/util/**</include>
                             </includes>
                         </configuration>
                     </execution>

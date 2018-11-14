@@ -1,4 +1,7 @@
-package priv.thinkam.niochat.util;
+package priv.thinkam.niochat.tool;
+
+import priv.thinkam.niochat.util.AESUtils;
+import priv.thinkam.niochat.util.StringUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
