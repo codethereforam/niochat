@@ -36,6 +36,24 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>
+                                ${project.build.directory}/libs
+                            </outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>2.6</version>
                 <executions>
@@ -60,6 +78,7 @@
                             </includes>
                         </configuration>
                     </execution>
+                    <!-- 部署项目需要copy该jar和libs目录 -->
                     <execution>
                         <id>build-netty-server</id>
                         <phase>package</phase>
@@ -72,6 +91,7 @@
                                 <manifest>
                                     <mainClass>priv.thinkam.niochat.netty.server.NettyChatServer</mainClass>
                                     <addClasspath>true</addClasspath>
+                                    <classpathPrefix>libs/</classpathPrefix>
                                 </manifest>
                             </archive>
                             <includes>
