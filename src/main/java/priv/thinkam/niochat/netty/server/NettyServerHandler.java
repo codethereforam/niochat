@@ -29,7 +29,10 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
 	private void sendOnlineInfoToNew(Channel incomingChannel) {
 		if (!CHANNEL_GROUP.isEmpty()) {
 			StringBuilder onlineMessage = new StringBuilder();
-			CHANNEL_GROUP.forEach(c -> onlineMessage.append(c.remoteAddress()).append(" is online!!!").append(System.lineSeparator()));
+			CHANNEL_GROUP.forEach(c -> onlineMessage
+							.append(c.remoteAddress())
+							.append(" is online!!!")
+							.append(System.lineSeparator()));
 			incomingChannel.writeAndFlush(onlineMessage.toString());
 		}
 	}
@@ -39,8 +42,8 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
 		Channel incomingChannel = ctx.channel();
 		String exitMessage = incomingChannel.remoteAddress() + " exited!!!";
 		System.out.println(exitMessage);
-		CHANNEL_GROUP.forEach(c -> c.writeAndFlush(exitMessage));
 		CHANNEL_GROUP.remove(incomingChannel);
+		CHANNEL_GROUP.forEach(c -> c.writeAndFlush(exitMessage));
 	}
 
 	@Override
@@ -48,11 +51,9 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
 		String message = (String) msg;
 		System.out.println(message);
 		Channel incomingChannel = ctx.channel();
-		for (Channel channel : CHANNEL_GROUP) {
-			if (channel != incomingChannel) {
-				channel.writeAndFlush(message);
-			}
-		}
+		CHANNEL_GROUP.stream()
+				.filter(channel -> channel != incomingChannel)
+				.forEach(channel -> channel.writeAndFlush(message));
 	}
 
 	@Override
