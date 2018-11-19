@@ -5,6 +5,7 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import priv.thinkam.niochat.common.Constant;
@@ -32,6 +33,7 @@ public class NettyChatServer {
 					@Override
 					protected void initChannel(SocketChannel socketChannel) {
 						ChannelPipeline channelPipeline = socketChannel.pipeline();
+						channelPipeline.addLast(new LineBasedFrameDecoder(2048));
 						channelPipeline.addLast("decoder", new StringDecoder());
 						channelPipeline.addLast("encoder", new StringEncoder());
 						channelPipeline.addLast(new NettyServerHandler());

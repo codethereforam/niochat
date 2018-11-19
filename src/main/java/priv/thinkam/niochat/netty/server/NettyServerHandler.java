@@ -21,7 +21,7 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
 		Channel incomingChannel = ctx.channel();
 		String connectedMessage = incomingChannel.remoteAddress() + " connected!!!" + System.lineSeparator();
 		System.out.println(connectedMessage);
-		CHANNEL_GROUP.forEach(c -> c.writeAndFlush(connectedMessage));
+		CHANNEL_GROUP.forEach(c -> c.writeAndFlush(connectedMessage + System.lineSeparator()));
 		this.sendOnlineInfoToNew(incomingChannel);
 		CHANNEL_GROUP.add(incomingChannel);
 	}
@@ -33,7 +33,7 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
 							.append(c.remoteAddress())
 							.append(" is online!!!")
 							.append(System.lineSeparator()));
-			incomingChannel.writeAndFlush(onlineMessage.toString());
+			incomingChannel.writeAndFlush(onlineMessage.toString() + System.lineSeparator());
 		}
 	}
 
@@ -43,7 +43,7 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
 		String exitMessage = incomingChannel.remoteAddress() + " exited!!!";
 		System.out.println(exitMessage);
 		CHANNEL_GROUP.remove(incomingChannel);
-		CHANNEL_GROUP.forEach(c -> c.writeAndFlush(exitMessage));
+		CHANNEL_GROUP.forEach(c -> c.writeAndFlush(exitMessage + System.lineSeparator()));
 	}
 
 	@Override
@@ -53,7 +53,7 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
 		Channel incomingChannel = ctx.channel();
 		CHANNEL_GROUP.stream()
 				.filter(channel -> channel != incomingChannel)
-				.forEach(channel -> channel.writeAndFlush(message));
+				.forEach(channel -> channel.writeAndFlush(message + System.lineSeparator()));
 	}
 
 	@Override
