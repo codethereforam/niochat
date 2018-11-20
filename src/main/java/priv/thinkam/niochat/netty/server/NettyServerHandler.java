@@ -5,7 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 /**
  * server handler
@@ -14,7 +14,7 @@ import io.netty.util.concurrent.DefaultEventExecutor;
  * @date 2018/11/14 15:25
  */
 public class NettyServerHandler extends ChannelInboundHandlerAdapter {
-	private static final ChannelGroup CHANNEL_GROUP = new DefaultChannelGroup(new DefaultEventExecutor());
+	private static final ChannelGroup CHANNEL_GROUP = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) {
