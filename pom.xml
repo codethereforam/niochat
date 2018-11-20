@@ -122,6 +122,29 @@
                             </includes>
                         </configuration>
                     </execution>
+                    <!-- 部署项目需要copy该jar和libs目录 -->
+                    <execution>
+                        <id>build-netty-client</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>netty-chat-client</finalName>
+                            <archive>
+                                <manifest>
+                                    <mainClass>priv.thinkam.niochat.netty.client.NettyChatClient</mainClass>
+                                    <addClasspath>true</addClasspath>
+                                    <classpathPrefix>libs/</classpathPrefix>
+                                </manifest>
+                            </archive>
+                            <includes>
+                                <include>**/netty/client/**</include>
+                                <include>**/common/**</include>
+                                <include>**/util/**</include>
+                            </includes>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>build-decrypt-tool</id>
                         <phase>package</phase>
